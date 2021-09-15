@@ -1,0 +1,76 @@
+version: '2'
+services:
+
+  #PHP
+  laravel_php:
+    build:
+      args:
+        user: anaconda
+        uid: 1000
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/
+    image: ${LARAVEL_IMAGE}
+    container_name: ${LARAVEL_CONTAINER_NAME}
+    restart: unless-stopped
+    tty: true
+    expose:
+     - ${PHP_FPM_PORT}
+    volumes:
+      - ./laravel:/var/www/
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini
+    networks:
+      - app-network
+
+  #Nginx Service
+  laravel_webserver:
+    image: nginx:latest
+    container_name: ${WEBSERVER_CONTAINER_NAME}
+    restart: unless-stopped
+    tty: true
+    ports:
+     - ${WEBSERVER_HTTP_PORT}
+     - ${WEBSERVER_HTTPS_PORT}
+    volumes:
+      - ./laravel:/var/www/
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./nginx/ssl/:/etc/nginx/ssl/
+    networks:
+      - app-network
+
+  #MySQL Service
+  laravel_mysql:
+    image: mariadb:latest
+    container_name: ${DB_CONTAINER_NAME}
+    restart: always
+    tty: true
+    expose:
+     - ${DB_PORT}
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./data/db:/var/lib/mysql
+    networks:
+      - app-network
+
+  #PHPMyAdmin
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: ${PHPMYADMIN_CONTAINER_NAME}
+    restart: always
+    ports:
+      - ${PHPMYADMIN_PORT}
+    environment:
+      - PMA_ARBITRARY=1
+    networks:
+    - app-network
+
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
